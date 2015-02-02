@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<!--
+	$Id: $
+	This manifest is distributed under the following MIT License terms:
+
+	Copyright (C) 2013 by Jim Klimov
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+-->
+<!--	SHORT README:
+	For greater detail see here: 
+		http://wiki.openindiana.org/oi/Zones+as+SMF+services
+
+	This SMF manifest allows to wrap execution of Solaris local zones
+	as SMF instances. It is limited to zone brands whose root shell is
+	accessible from the GZ with "zlogin -S". Install manifest in GZ with:
+	:; svccfg import zone.xml
+	To start, simply create an SMF instance named same as a local zone:
+	:; ZONE=myzone
+	:; svccfg -s zone add $ZONE
+	:; svcadm enable -s $ZONE
+	:; svcadm refresh $ZONE
+	...and now you can manage it like any SMF instance, including setup of
+	dependencies on other FMRI resources (like instances of other zones).
+	The SMFized zones by default depend on a grouping service instance
+	"svc:/system/zones:default"; you can change it to another grouping:
+	:; DEPPG=zone-group
+	:; DEPINST=zones-dummies
+	:; DEPFMRI="svc:/system/zone-group:$DEPINST"
+	#:; svccfg -s zone-group add "$DEPINST"
+	:; svccfg -s zone:$ZONE addpg $DEPPG dependency
+	:; svccfg -s zone:$ZONE setprop $DEPPG/grouping = astring: require_all
+	:; svccfg -s zone:$ZONE setprop $DEPPG/restart_on = astring: restart
+	:; svccfg -s zone:$ZONE setprop $DEPPG/type = astring: service
+	:; svccfg -s zone:$ZONE setprop $DEPPG/entities = fmri: "$DEPFMRI"
+	:; svcadm refresh zone:$ZONE
+	Adding other dependencies is just as simple, just change DEPPG and
+	pick your restart_on value (maybe even "none" if the service inside
+	the zone can reconnect to a restarted external service on its own).
+	Finally, you can override the methods used to verify startup and
+	shutdown of the zone, and the method to initiate shutdown, for example:
+	:; svccfg -s zone:$ZONE addpg zone application
+	:; svccfg -s zone:$ZONE setprop zone/check_start='"/root/test start"' 
+	:; svccfg -s zone:$ZONE setprop zone/init_stop="halt"
+	:; svcadm refresh $ZONE
+	And note that for dependencies "svcadm restart" is different from an
+	"svcadm disable -s ...; svcadm enable -s ..." couple; use the latter.A
+	Good luck! :)
+-->
+<service_bundle type='manifest' name='zone-group'>
+
+<service
+	name='system/zone'
+	type='service'
+	version='1.1'>
+
+	<dependency	name='zone-group'
+		type='service' grouping='require_all'
+		restart_on='restart'>
+		<service_fmri value='svc:/system/zone-group:default' />
+	</dependency>
+
+	<exec_method type='method' name='start' timeout_seconds='0'
+		exec="zoneadm -z %i list -p | awk -F: '{print $3}' | egrep -vi 'CONFIGURED|INCOMPLETE' || exit; zoneadm -z %i boot &amp;&amp; sleep 5 &amp;&amp; while : ; do zlogin -S %i 'eval %{zone/check_start}' &amp;&amp; exit 0; sleep 3; done" >
+	    <method_context>
+    		<method_credential user='root' group='root' />
+    	    </method_context>
+    	</exec_method>
+
+	<exec_method type='method' name='stop' timeout_seconds='0'
+		exec="zoneadm -z %i list -p | awk -F: '{print $3}' | egrep -vi 'CONFIGURED|INCOMPLETE' || exit; while : ; do zoneadm -z %i list -p | awk -F: '{print $3}' | egrep -i 'INSTALLED' &amp;&amp; exit 0; tail -15 `svcprop -p restarter/logfile %i` | grep Method | grep -v Executing | tail -2 | egrep 'Method or service exit timed out|Method .stop. failed due to signal KILL' | wc -l | grep -w 2 > /dev/null &amp;&amp; ( echo HALT ; zoneadm -z %i halt ) || zlogin -S %i 'eval %{zone/init_stop}; eval %{zone/check_stop}' ; sleep 3; done" >
+	    <method_context>
+    		<method_credential user='root' group='root' />
+    	    </method_context>
+    	</exec_method>
+
+	<exec_method type='method' name='refresh' timeout_seconds='0'
+		exec='zonecfg -z %i set autoboot=false' >
+	    <method_context>
+    		<method_credential user='root' group='root' />
+    	    </method_context>
+    	</exec_method>
+
+	<property_group name='zone' type='application'>
+		<propval name='init_stop' type='astring'
+			value='init 5' />
+		<propval name='check_start' type='astring'
+			value='svcadm enable -ts svc:/milestone/multi-user-server:default' />
+		<propval name='check_stop' type='astring'
+			value='svcadm disable -ts svc:/system/svc/restarter:default' />
+	</property_group>
+
+	<property_group name='startd' type='framework'>
+		<propval name='duration' type='astring' value='transient' />
+	</property_group>
+
+	<template> 
+		<common_name> 
+			<loctext xml:lang='C'>Wrapper for individual Solaris-style local zones to start and stop in order set by SMF dependencies</loctext> 
+		</common_name> 
+		<documentation> 
+			<manpage title='zones' section='5' /> 
+			<doc_link name='illumos.org' 
+				uri='http://www.illumos.org/' /> 
+		</documentation> 
+	</template> 
+</service> 
+</service_bundle>
+

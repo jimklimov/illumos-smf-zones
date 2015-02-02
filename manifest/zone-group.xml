@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<!--
+	$Id: $
+	This manifest is distributed under the following MIT License terms:
+
+	Copyright (C) 2013 by Jim Klimov
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+-->
+<!--	SHORT README:
+	For greater detail see here: 
+		http://wiki.openindiana.org/oi/Zones+as+SMF+services
+
+	This SMF manifest allows to group execution of Solaris local zones
+	wrapped as SMF instances (see zone.xml manifest). This service does
+	nothing actively, and is just a placeholder for spawning instances
+	which depend on the system "svc:/system/zones:default" service.
+	Install this manifest in the global zone with:
+	:; svccfg import zone-group.xml
+	Create new instances for SMFized zones to later depend on with:
+	:; svccfg -s zone-group add mynewgroup
+	:; svcadm enable mynewgroup
+	See the zones.xml or the Wiki page on details about updating a zone
+	instance's dependency from default zone-group to a custom one.
+	Good luck! ;)
+-->
+<service_bundle type='manifest' name='zone-group'>
+
+<service
+	name='system/zone-group'
+	type='service'
+	version='1.1'>
+
+	<create_default_instance enabled='true' />
+
+	<dependency	name='zones'
+		type='service' grouping='require_all'
+		restart_on='restart'>
+		<service_fmri value='svc:/system/zones:default' />
+	</dependency>
+	<exec_method type='method' name='start' timeout_seconds='0'
+		exec=':true' />
+	<exec_method type='method' name='stop'  timeout_seconds='0'
+		exec=':true' />
+	<property_group name='startd' type='framework'>
+		<propval name='duration' type='astring' value='transient' />
+	</property_group>
+	<template> 
+		<common_name> 
+			<loctext xml:lang='C'>Grouping for certain sets of local zones to be started and stopped together by dependencies.</loctext> 
+		</common_name> 
+		<documentation> 
+			<manpage title='zones' section='5' /> 
+			<doc_link name='illumos.org' 
+				uri='http://www.illumos.org/' /> 
+		</documentation> 
+	</template> 
+</service> 
+</service_bundle>
+
