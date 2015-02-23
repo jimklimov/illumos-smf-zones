@@ -9,6 +9,8 @@
 <!--	SHORT README:
 	For greater detail see here: 
 		http://wiki.openindiana.org/oi/Zones+as+SMF+services
+	For CLI automation see ../bin/zoneadm-smf script in this project,
+	which automates some of the snippets below, and more.
 
 	This SMF manifest allows to wrap execution of Solaris local zones
 	as SMF instances. It is limited to zone brands whose root shell is
@@ -43,7 +45,7 @@
 	:; svccfg -s zone:$ZONE setprop zone/init_stop="halt"
 	:; svcadm refresh $ZONE
 	And note that for dependencies "svcadm restart" is different from an
-	"svcadm disable -s ...; svcadm enable -s ..." couple; use the latter.A
+	"svcadm disable -s ...; svcadm enable -s ..." couple; use the latter.
 	Good luck! :)
 -->
 <service_bundle type='manifest' name='zone'>
