@@ -9,6 +9,8 @@
 <!--	SHORT README:
 	For greater detail see here: 
 		http://wiki.openindiana.org/oi/Zones+as+SMF+services
+	For CLI automation see ../bin/zoneadm-smf script in this project,
+	which automates some of the snippets below, and more.
 
 	This SMF manifest allows to group execution of Solaris local zones
 	wrapped as SMF instances (see zone.xml manifest). This service does
