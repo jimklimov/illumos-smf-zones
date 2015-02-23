@@ -289,14 +289,15 @@ dependOn_ZS_ZG() {
     ### Shorthand for dependency of a ZoneSvc instance ($1) on a ZoneGroup ($2)
     create_inst_zonegrp "$2" || return
     create_inst_zone "$1" || return
-    DEPPG="$3"
+    P1="${BASEFMRI_ZONESVC}:$1"
+    P2="${BASEFMRI_ZONEGRP}:$2"
+    P3="$3"
+    [ -z "$P3" ] && \
+        P3="zone-group_$2"
     shift 3
-    [ -z "$DEPPG" ] && \
-        DEPPG="zone-group_$2"
-    dependOn "${BASEFMRI_ZONESVC}:$1" "${BASEFMRI_ZONEGRP}:$2" "$DEPPG" "$@"
+    dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && \
-        { svcs -D "${BASEFMRI_ZONEGRP}:$2"; RESD=$?; }
+    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
     return $RESD
 }
 
@@ -304,14 +305,15 @@ dependOn_ZS_ZS() {
     ### Shorthand for dependency of a ZoneSvc instance ($1) on a ZoneSvc ($2)
     create_inst_zone "$1" || return
     create_inst_zone "$2" || return
-    DEPPG="$3"
+    P1="${BASEFMRI_ZONESVC}:$1"
+    P2="${BASEFMRI_ZONESVC}:$2"
+    P3="$3"
+    [ -z "$P3" ] && \
+        P3="zone_$2"
     shift 3
-    [ -z "$DEPPG" ] && \
-        DEPPG="zone_$2"
-    dependOn "${BASEFMRI_ZONESVC}:$1" "${BASEFMRI_ZONESVC}:$2" "$DEPPG" "$@"
+    dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && \
-        { svcs -D "${BASEFMRI_ZONESVC}:$2"; RESD=$?; }
+    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
     return $RESD
 }
 
@@ -319,14 +321,15 @@ dependOn_ZG_ZG() {
     ### Shorthand for dependency of a ZoneGroup ($1) on a ZoneGroup ($2)
     create_inst_zonegrp "$1" || return
     create_inst_zonegrp "$2" || return
-    DEPPG="$3"
+    P1="${BASEFMRI_ZONEGRP}:$1"
+    P2="${BASEFMRI_ZONEGRP}:$2"
+    P3="$3"
+    [ -z "$P3" ] && \
+        P3="zone-group_$2"
     shift 3
-    [ -z "$DEPPG" ] && \
-        DEPPG="zone-group_$2"
-    dependOn "${BASEFMRI_ZONEGRP}:$1" "${BASEFMRI_ZONEGRP}:$2" "$DEPPG" "$@"
+    dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && \
-        { svcs -D "${BASEFMRI_ZONEGRP}:$2"; RESD=$?; }
+    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
     return $RESD
 }
 
@@ -337,14 +340,15 @@ dependOn_ZG_ZS() {
          "zone into its own zone-group instead for extensibility" >&2
     create_inst_zonegrp "$1" || return
     create_inst_zone "$2" || return
-    DEPPG="$3"
+    P1="${BASEFMRI_ZONEGRP}:$1"
+    P2="${BASEFMRI_ZONESVC}:$2"
+    P3="$3"
+    [ -z "$P3" ] && \
+        P3="zone_$2"
     shift 3
-    [ -z "$DEPPG" ] && \
-        DEPPG="zone_$2"
-    dependOn "${BASEFMRI_ZONEGRP}:$1" "${BASEFMRI_ZONESVC}:$2" "$DEPPG" "$@"
+    dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && \
-        { svcs -D "${BASEFMRI_ZONESVC}:$2"; RESD=$?; }
+    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
     return $RESD
 }
 
