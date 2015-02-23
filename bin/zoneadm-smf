@@ -652,7 +652,7 @@ while [ $# -gt 0 ]; do
             done
             exit 0
             ;;
-        wrap-zone|wrap-zonesvc)
+        wrap-zone|wrap-zonesvc|wrap)
             shift 1
             _S=""
             [ "$1" = "-s" ] && _S="-s" && shift
@@ -663,7 +663,7 @@ while [ $# -gt 0 ]; do
             done
             exit 0
             ;;
-        unwrap-zone|unwrap-zonesvc)
+        unwrap-zone|unwrap-zonesvc|unwrap)
             shift 1
             _S=""
             [ "$1" = "-s" ] && _S="-s" && shift
