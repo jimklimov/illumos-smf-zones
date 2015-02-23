@@ -105,7 +105,18 @@ create_inst_zone() {
     ### This command wraps creation of an SMF instance for a zone "$1",
     ### if it does not yet exist; see also wrap_inst_zone()
     ZONE="$1"
-    ZSTATE="`svcs -H -o state "${BASEFMRI_ZONESVC}:$ZONE" 2>/dev/null`" && \
+    [ "$ZONE" = global -o -z "$ZONE" ] && \
+        echo "ERROR: Can not SMFize zone '$ZONE'" >&2 && \
+        return 1
+
+    ZSTATE="`zoneadm -z "$ZONE" list -p | awk -F: '{print $3}'`" || \
+    ZSTATE="`zoneadm -z "$ZONE" list -v | grep -w "$ZONE" | tail -1 | awk '{print $3}'`" || \
+    ZSTATE=""
+    [ -z "$ZSTATE" ] && \
+        echo "ERROR: Cannot determine state of zone $ZONE" >&2 && \
+        return 1
+
+    svcs -H -o state "${BASEFMRI_ZONESVC}:$ZONE" >/dev/null 2>&1 && \
         echo "INFO: SKIP zone $ZONE: already SMFized" && \
         return 0
 
@@ -174,8 +185,8 @@ disable_inst_zone() {
 
     if isValidFullFMRI "${BASEFMRI_ZONESVC}:$1" >/dev/null 2>&1; then
         [ -z "$SVCWAIT" ] && \
-          echo "INFO: Disabling SMF instance for zone:$1" || \
-          echo "INFO: Waiting for SMF instance zone:$1 to stop"
+          echo "INFO: Temporarily-disabling SMF instance for zone:$1" || \
+          echo "INFO: Waiting for SMF instance zone:$1 to temporarily stop"
         svcadm disable -t $SVCWAIT "${BASEFMRI_ZONESVC}:$1"
     fi
 }
@@ -426,7 +437,11 @@ wrap_inst_zone() {
     ### This command wraps creation of an SMF instance for a zone "$1",
     ### if it does not yet exist, and its setup into disabled/enabled state
     ZONE="$1"
-    ZSTATE="`svcs -H -o state "${BASEFMRI_ZONESVC}:$ZONE" 2>/dev/null`" && \
+    svcs -H -o state "${BASEFMRI_ZONESVC}:$ZONE" >/dev/null 2>&1 && \
+        echo "INFO: SKIP zone $ZONE: already SMFized" && \
+        return 0
+
+    isValidFullFMRI "${BASEFMRI_ZONESVC}:$ZONE" >/dev/null 2>&1 && \
         echo "INFO: SKIP zone $ZONE: already SMFized" && \
         return 0
 
@@ -437,20 +452,23 @@ wrap_inst_zone() {
 
     if zonecfg -z "$ZONE" info autoboot | grep true; then
         echo "INFO: Zone $ZONE: was autobooting"
-        if [ x"$ZSTATE" = xconfigured -o x"$ZSTATE" = xincomplete ]; then
-            echo "INFO: Zone $ZONE: was currently not running, disabling SMF instance"
-            svcadm disable $SVCWAIT "${BASEFMRI_ZONESVC}:$ZONE"
-        else
+        case x"$ZSTATE" in
+            xrunning)
             echo "INFO: Zone $ZONE: was currently running, enabling SMF instance"
             svcadm enable $SVCWAIT "${BASEFMRI_ZONESVC}:$ZONE"
-        fi && \
+            ;;
+            xconfigured|xincomplete|xinstalled|*)
+            echo "INFO: Zone $ZONE: was currently not running, disabling SMF instance"
+            svcadm disable $SVCWAIT "${BASEFMRI_ZONESVC}:$ZONE"
+            ;;
+        esac && \
             sleep 3 && \
             zonecfg -z "$ZONE" set "autoboot=false" && \
             svcadm refresh "${BASEFMRI_ZONESVC}:$ZONE"
         return $?
     fi
 
-    echo "INFO: Zone $ZONE: was disabled, disabling SMF instance and assigning to zone-group-DISABLED"
+    echo "INFO: Zone $ZONE: autoboot was disabled, disabling SMF instance and assigning to zone-group-DISABLED"
     ensure_inst_zonegrp_disabled && \
     svcadm disable $SVCWAIT "${BASEFMRI_ZONESVC}:$ZONE" && \
     zonecfg -z "$ZONE" set "autoboot=false" && \
