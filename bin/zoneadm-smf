@@ -26,6 +26,7 @@ BASEFMRI_ZONEGRP=svc:/system/zone-group
 usage() {
     echo "$0: administer SMF instances for local zones"
     echo "See also:  http://wiki.openindiana.org/oi/Zones+as+SMF+services"
+    echo "MAJOR OPTIONS are list | install | wrap | unwrap | depend*"
     echo "$0 list [re_zonesvc...|re_zonegrp...]"
     echo "      List known zones and SMF instances for zones or groups (or all)"
     echo "$0 registerSvcs"
@@ -88,23 +89,37 @@ isValidZonename() {
     return 123
 }
 
+ensure_inst_zonegrp_disabled() {
+    ### Make sure "zone-group:zones-disabled" exists
+    isValidZonename global >/dev/null || return $?
+    isValidFullFMRI "${BASEFMRI_ZONEGRP}:zones-disabled" && return 0
+
+    create_inst_zonegrp "zones-disabled" && \
+    svcadm disable "${BASEFMRI_ZONEGRP}:zones-disabled" && \
+    svcadm refresh "${BASEFMRI_ZONEGRP}:zones-disabled"
+    return $?
+}
+
 create_inst_zone() {
     ### This command wraps creation of an SMF instance for a zone "$1",
-    ### if it does not yet exist
+    ### if it does not yet exist; see also wrap_inst_zone()
+    ZONE="$1"
+    ZSTATE="`svcs -H -o state "${BASEFMRI_ZONESVC}:$ZONE" 2>/dev/null`" && \
+        echo "INFO: SKIP zone $ZONE: already SMFized" && \
+        return 0
 
-    isValidFullFMRI "${BASEFMRI_ZONESVC}:$1" >/dev/null 2>&1 && return 0 || \
-        if isValidZonename "$1" >/dev/null ; then
-            echo "INFO: Creating SMF instance for zone:$1"
-            svccfg -s "${BASEFMRI_ZONESVC}" add "$1" || return
+    isValidFullFMRI "${BASEFMRI_ZONESVC}:$ZONE" >/dev/null 2>&1 && return 0 || \
+        if isValidZonename "$ZONE" >/dev/null ; then
+            echo "INFO: Creating SMF instance for zone:$ZONE (state=$ZSTATE)"
+            svccfg -s "${BASEFMRI_ZONESVC}" add "$ZONE" || return $?
         else
-            echo "ERROR: Undefined local zone '$1'" >&2
+            echo "ERROR: Undefined local zone '$ZONE'" >&2
             return 123
         fi
 
     ### Test if we have the instance now...
-    isValidFullFMRI "${BASEFMRI_ZONESVC}:$1" >/dev/null 2>&1
+    isValidFullFMRI "${BASEFMRI_ZONESVC}:$ZONE" >/dev/null 2>&1
 }
-
 
 destroy_inst_zone() {
     ### This command unregisters an SMF instance for a zone, if any
@@ -123,7 +138,7 @@ destroy_inst_zone() {
 
 enable_inst_zone() {
     ### If a zone's SMF instance exists, enable it and do a refresh
-    ### (to set autoboot=false in particular)
+    ### (to set autoboot=false in particular); see also wrap_inst_zone()
     ### Optionally provide "$2==-s" to return only after svc is started
 
     SVCWAIT=""
@@ -297,7 +312,10 @@ dependOn_ZS_ZG() {
     shift 3
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
+    if [ $RESD = 0 -a -z "$QUIET" ]; then
+        echo "INFO: What depends on '$P2':"
+        svcs -D "$P2"; RESD=$?
+    fi
     return $RESD
 }
 
@@ -313,7 +331,10 @@ dependOn_ZS_ZS() {
     shift 3
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
+    if [ $RESD = 0 -a -z "$QUIET" ]; then
+        echo "INFO: What depends on '$P2':"
+        svcs -D "$P2"; RESD=$?
+    fi
     return $RESD
 }
 
@@ -329,7 +350,10 @@ dependOn_ZG_ZG() {
     shift 3
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
+    if [ $RESD = 0 -a -z "$QUIET" ]; then
+        echo "INFO: What depends on '$P2':"
+        svcs -D "$P2"; RESD=$?
+    fi
     return $RESD
 }
 
@@ -348,7 +372,10 @@ dependOn_ZG_ZS() {
     shift 3
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
-    [ $RESD = 0 -a -z "$QUIET" ] && { svcs -D "$P2"; RESD=$?; }
+    if [ $RESD = 0 -a -z "$QUIET" ]; then
+        echo "INFO: What depends on '$P2':"
+        svcs -D "$P2"; RESD=$?
+    fi
     return $RESD
 }
 
@@ -357,9 +384,9 @@ registerSvcs() {
     GOT_ZONESVC=-1
     GOT_ZONEGRP=-1
 
-    isValidZonename global || return $?
+    isValidZonename global >/dev/null || return $?
 
-    if isValidFullFMRI "${BASEFMRI_ZONESVC}:default" ; then
+    if isValidFullFMRI "${BASEFMRI_ZONESVC}" >/dev/null 2>&1; then
         GOT_ZONESVC=0
     else
         for D in \
@@ -374,7 +401,7 @@ registerSvcs() {
         done
     fi
 
-    if isValidFullFMRI "${BASEFMRI_ZONEGRP}:default" ; then
+    if isValidFullFMRI "${BASEFMRI_ZONEGRP}:default" >/dev/null 2>&1 ; then
         GOT_ZONEGRP=0
     else
         for D in \
@@ -392,6 +419,53 @@ registerSvcs() {
     [ "$GOT_ZONEGRP" = 0 -a "$GOT_ZONESVC" = 0 ]
 }
 
+wrap_inst_zone() {
+    ### This command wraps creation of an SMF instance for a zone "$1",
+    ### if it does not yet exist, and its setup into disabled/enabled state
+    ZONE="$1"
+    ZSTATE="`svcs -H -o state "${BASEFMRI_ZONESVC}:$ZONE" 2>/dev/null`" && \
+        echo "INFO: SKIP zone $ZONE: already SMFized" && \
+        return 0
+
+    create_inst_zone "$ZONE" || return $?
+
+    SVCWAIT=""
+    [ x"$2" = x-s ] && SVCWAIT=-s
+
+    if zonecfg -z "$ZONE" info autoboot | grep true; then
+        echo "INFO: Zone $ZONE: was autobooting"
+        if [ x"$ZSTATE" = xconfigured -o x"$ZSTATE" = xincomplete ]; then
+            echo "INFO: Zone $ZONE: was currently not running, disabling SMF instance"
+            svcadm disable $SVCWAIT "${BASEFMRI_ZONESVC}:$ZONE"
+        else
+            echo "INFO: Zone $ZONE: was currently running, enabling SMF instance"
+            svcadm enable $SVCWAIT "${BASEFMRI_ZONESVC}:$ZONE"
+        fi && \
+            sleep 3 && \
+            zonecfg -z "$ZONE" set "autoboot=false" && \
+            svcadm refresh "${BASEFMRI_ZONESVC}:$ZONE"
+        return $?
+    fi
+
+    echo "INFO: Zone $ZONE: was disabled, disabling SMF instance and assigning to zone-group-DISABLED"
+    ensure_inst_zonegrp_disabled && \
+    svcadm disable $SVCWAIT "${BASEFMRI_ZONESVC}:$ZONE" && \
+    zonecfg -z "$ZONE" set "autoboot=false" && \
+    QUIET=yes dependOn_ZS_ZG "$ZONE" \
+        "zones-disabled" \
+        "zone-group-DISABLED" \
+        "require_all" "restart"
+    RES=$?
+
+    if [ $RES = 0 -a x"$ZSTATE" = xonline ]; then
+        echo "INFO: Zone $ZONE: was booted, so booting it back"
+        svcadm disable -s "${BASEFMRI_ZONESVC}:$ZONE"
+        zoneadm -z "$ZONE" boot || RES=$?
+    fi
+
+    return $RES
+}
+
 registerAllZones() {
     ### Detect defined local zones with autoboot="false" and make them depend
     ### on "zones-disabled" group, make no default dependency for other zones;
@@ -399,45 +473,21 @@ registerAllZones() {
     ### should be covered by an SMF instance and set to autoboot=false so that
     ### a "zones:default" service does not boot them in its inorderly fashion.
 
-    isValidZonename global || return $?
+    SVCWAIT=""
+    [ x"$2" = x-s ] && SVCWAIT=-s
 
-    create_inst_zonegrp "zones-disabled" && \
-    svcadm disable "${BASEFMRI_ZONEGRP}:zones-disabled" && \
-    svcadm refresh "${BASEFMRI_ZONEGRP}:zones-disabled" || \
-    return $?
+    RES=0
+    for Z in \
+        `zoneadm list -cv | awk '{print $2}' | egrep -v 'NAME|global'` \
+    ; do
+        wrap_inst_zone "$Z" $SVCWAIT || RES=$?
+    done
 
-    zoneadm list -cv | awk '{print $3" "$2}' | egrep -v 'NAME|global' | \
-    while read ZSTATE ZONE; do
-        echo "=== $ZONE ($ZSTATE)"
-        svcs -H -o state "${BASEFMRI_ZONESVC}:$ZONE" 2>/dev/null && \
-            echo "INFO: SKIP zone $ZONE: already SMFized" && \
-            continue
-
-        if zonecfg -z "$ZONE" info autoboot | grep true; then
-            echo "INFO: Zone $ZONE: autobooting"
-            create_inst_zone "$ZONE" && \
-            if [ x"$ZSTATE" = xconfigured -o x"$ZSTATE" = xincomplete ]; then
-                svcadm disable "${BASEFMRI_ZONESVC}:$ZONE"
-            else
-                svcadm enable "${BASEFMRI_ZONESVC}:$ZONE"
-            fi && \
-            sleep 3 && \
-            zonecfg -z "$ZONE" set "autoboot=false" && \
-            svcadm refresh "${BASEFMRI_ZONESVC}:$ZONE"
-        continue
-        fi
-
-        echo "INFO: Zone $ZONE: disabled"
-        create_inst_zone "$ZONE" && \
-        svcadm disable "${BASEFMRI_ZONESVC}:$ZONE" && \
-        zonecfg -z "$ZONE" set "autoboot=false" && \
-        dependOn_ZS_ZG "$ZONE" \
-            "zones-disabled" \
-            "zone-group-DISABLED" \
-            "require_all" "restart"
-   done
-
-    [ $? = 0 ] && svcs -D "${BASEFMRI_ZONEGRP}:zones-disabled"
+    if [ $RES = 0 ]; then
+        echo "INFO: What depends on '${BASEFMRI_ZONEGRP}:zones-disabled':"
+        svcs -D "${BASEFMRI_ZONEGRP}:zones-disabled"; RES=$?
+    fi
+    return $RES
 }
 
 zonesvccfg_life_args() {
@@ -658,8 +708,7 @@ while [ $# -gt 0 ]; do
             [ "$1" = "-s" ] && _S="-s" && shift
             [ $# -gt 0 ] || exit $?
             for Z in "$@"; do
-                create_inst_zone "$Z" || exit $?
-                enable_inst_zone "$Z" $_S || exit $?
+                wrap_inst_zone "$Z" $_S || exit $?
             done
             exit 0
             ;;
@@ -668,11 +717,27 @@ while [ $# -gt 0 ]; do
             _S=""
             [ "$1" = "-s" ] && _S="-s" && shift
             [ $# -gt 0 ] || exit $?
-            for Z in "$@"; do
-                disable_inst_zone "$Z" $_S || exit $?
-                destroy_inst_zone "$Z" || exit $?
-            done
-            exit 0
+            RES=0
+            if [ "$_S" = "-s" ] ; then
+                for Z in "$@"; do
+                    disable_inst_zone "$Z" $_S || RES=$?
+                    destroy_inst_zone "$Z" || RES=$?
+                done
+            else
+                _P=""
+                for Z in "$@"; do
+                    ( disable_inst_zone "$Z" -s && \
+                      destroy_inst_zone "$Z" ) &
+                    _P="$_P $!"
+                done
+                wait $_P >/dev/null 2>&1 || RES=$?
+            fi
+            sleep 1
+            echo ""
+            echo "=== unwrap-zone: overall result: $RES"
+            listZones "$@"
+
+            exit $RES
             ;;
         restart|restart-zone|restart-zonesvc)
             shift 1
@@ -740,8 +805,24 @@ while [ $# -gt 0 ]; do
             ;;
         install)
             registerSvcs && \
-            registerAllZones
+            registerAllZones && \
+            listZones
             exit $?
+            ;;
+        editprop)
+            for S in \
+                "$2" "$2:default" "svc:/system/$2" \
+                "${BASEFMRI_ZONESVC}:$2" "${BASEFMRI_ZONEGRP}:$2"\
+            ; do
+                if isValidFullFMRI "$S" >/dev/null 2>&1 ; then
+                    echo "INFO: svccfg -s '$S' editprop ..."
+                    sleep 2
+                    svccfg -s "$S" editprop
+                    exit $?
+                fi
+            done
+            echo "ERROR: No zone-related service matched '$2'" >&2
+            exit 1
             ;;
         -h|--help|help)
             usage
