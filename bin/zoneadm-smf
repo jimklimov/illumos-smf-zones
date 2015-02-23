@@ -28,9 +28,13 @@ usage() {
     echo "See also:  http://wiki.openindiana.org/oi/Zones+as+SMF+services"
     echo "$0 list [re_zonesvc...|re_zonegrp...]"
     echo "      List known zones and SMF instances for zones or groups (or all)"
+    echo "$0 registerSvcs"
+    echo "      Import the base SMF services from XMLs if absent yet"
     echo "$0 registerAllZones"
     echo "      All currently un-SMFized become SMFized with autoboot=false; of those"
     echo "      the disabled zones become dependent on the 'zone-group:zones-disabled'"
+    echo "      Intended for re-runs after new zones are defined"
+    echo "$0 install    = registerSvcs + registerAllZones"
     echo "$0 { register-zone | unregister-zone } re_zone[...]"
     echo "      Register an existing zone into a service or remove a service;"
     echo "$0 { register-zone-group | unregister-zone-group } re_zonegrp[...]"
@@ -727,6 +731,10 @@ while [ $# -gt 0 ]; do
             exit $?
             ;;
         registerAllZones)
+            registerAllZones
+            exit $?
+            ;;
+        install)
             registerSvcs && \
             registerAllZones
             exit $?
