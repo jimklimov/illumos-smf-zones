@@ -349,6 +349,8 @@ registerSvcs() {
     GOT_ZONESVC=-1
     GOT_ZONEGRP=-1
 
+    isValidZonename global || return $?
+
     if isValidFullFMRI "${BASEFMRI_ZONESVC}:default" ; then
         GOT_ZONESVC=0
     else
@@ -388,6 +390,8 @@ registerAllZones() {
     ### skip zones that are already SMFized. In effect, all existing zones now
     ### should be covered by an SMF instance and set to autoboot=false so that
     ### a "zones:default" service does not boot them in its inorderly fashion.
+
+    isValidZonename global || return $?
 
     create_inst_zonegrp "zones-disabled" && \
     svcadm disable "${BASEFMRI_ZONEGRP}:zones-disabled" && \
