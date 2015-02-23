@@ -49,7 +49,7 @@ usage() {
     echo "      -s      Optional: do the restarts sequentially (otherwise parallel)"
     echo "$0 dependOn {TARGET_FMRI} {DEPEND_FMRI[...]} [DEPPG] [GROUPING] [RESTARTON]"
     echo "      Creates a general dependency from SMF TARGET_FMRI on DEPEND_FMRI"
-    echo "      DEPEND_FMRI may be a space-separated list of full FMRI URLs"
+    echo "      DEPEND_FMRI may be a (backslash+)space-separated list of full FMRI URLs"
     echo "$0 { dependOn_ZS_ZG | dependOn_ZS_ZS | \ "
     echo "      dependOn_ZG_ZS | dependOn_ZG_ZG } \ "
     echo "      TARGET_INST DEPEND_INST [DEPPG] [GROUPING] [RESTARTON]"
@@ -299,7 +299,7 @@ dependOn() {
     svccfg -s "$TARGET_FMRI" setprop "$DEPPG"/grouping = astring: "$GROUPING" && \
     svccfg -s "$TARGET_FMRI" setprop "$DEPPG"/restart_on = astring: "$RESTARTON" && \
     svccfg -s "$TARGET_FMRI" setprop "$DEPPG"/type = astring: service && \
-    svccfg -s "$TARGET_FMRI" setprop "$DEPPG"/entities = fmri: "$DEPEND_FMRI" && \
+    svccfg -s "$TARGET_FMRI" setprop "$DEPPG"/entities = fmri: "($DEPEND_FMRI)" && \
     svcadm refresh "$TARGET_FMRI"
 }
 
