@@ -62,6 +62,7 @@ usage() {
     echo "$0 { zonesvccfg_life_args_graceful | zonesvccfg_life_args_harsh } zone"
     echo "      Set custom methods for graceful SMF-based startup/shutdown, or"
     echo "      for harsh shutdown with unchecked startup (dummy zones, lx, etc.)"
+    echo "$0 editprop zonename  = svccfg editprop relevant zone or zone-group"
 }
 
 isValidFullFMRI() {
@@ -146,6 +147,8 @@ enable_inst_zone() {
 
     if isValidFullFMRI "${BASEFMRI_ZONESVC}:$1" >/dev/null 2>&1; then
           echo "INFO: Enabling SMF instance for zone:$1"
+          svccfg -s "${BASEFMRI_ZONESVC}:$1" \
+            delpg "zone-group-DISABLED" >/dev/null 2>&1
           svcadm enable "${BASEFMRI_ZONESVC}:$1" && \
           echo "INFO: Removing generic autoboot for zone:$1" && \
           svcadm refresh "${BASEFMRI_ZONESVC}:$1"
