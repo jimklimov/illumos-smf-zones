@@ -3,7 +3,7 @@
 <!--
 	This manifest is distributed under the terms of CDDL 1.0
 		http://www.illumos.org/license/CDDL
-	Copyright (C) 2013-2015 by Jim Klimov
+	Copyright (C) 2013-2016 by Jim Klimov
 		https://github.com/jimklimov/illumos-smf-zones
 -->
 <!--	SHORT README:
@@ -53,7 +53,7 @@
 <service
 	name='system/zone'
 	type='service'
-	version='1.1'>
+	version='1.2'>
 
 	<dependency	name='zone-group'
 		type='service' grouping='require_all'
@@ -62,7 +62,7 @@
 	</dependency>
 
 	<exec_method type='method' name='start' timeout_seconds='0'
-		exec="zoneadm -z %i list -p | awk -F: '{print $3}' | egrep -vi 'CONFIGURED|INCOMPLETE' || exit; zoneadm -z %i boot &amp;&amp; sleep 5 &amp;&amp; while : ; do zlogin -S %i 'eval %{zone/check_start}' &amp;&amp; exit 0; sleep 3; done" >
+		exec="zoneadm -z %i list -p | awk -F: '{print $3}' | egrep -vi 'CONFIGURED|INCOMPLETE' || exit; zoneadm -z %i boot &amp;&amp; sleep 5 &amp;&amp; while : ; do zlogin -S %i 'eval %{zone/check_start}' &amp;&amp; exit 0; sleep 3; zoneadm -z %i list -p | awk -F: '{print $3}' | egrep -i 'INSTALLED' &amp;&amp; exit 95; done" >
 	    <method_context>
     		<method_credential user='root' group='root' />
     	    </method_context>
