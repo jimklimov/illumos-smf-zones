@@ -325,8 +325,9 @@ dependOn_ZS_ZG() {
     P2="${BASEFMRI_ZONEGRP}:$2"
     P3="$3"
     [ -z "$P3" ] && \
-        P3="zone-group_$2"
-    shift 3
+        P3="zone-group_$2" \
+        || shift
+    shift 2
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
     if [ $RESD = 0 -a -z "$QUIET" ]; then
@@ -344,8 +345,9 @@ dependOn_ZS_ZS() {
     P2="${BASEFMRI_ZONESVC}:$2"
     P3="$3"
     [ -z "$P3" ] && \
-        P3="zone_$2"
-    shift 3
+        P3="zone_$2" \
+        || shift
+    shift 2
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
     if [ $RESD = 0 -a -z "$QUIET" ]; then
@@ -363,8 +365,9 @@ dependOn_ZG_ZG() {
     P2="${BASEFMRI_ZONEGRP}:$2"
     P3="$3"
     [ -z "$P3" ] && \
-        P3="zone-group_$2"
-    shift 3
+        P3="zone-group_$2" \
+        || shift
+    shift 2
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
     if [ $RESD = 0 -a -z "$QUIET" ]; then
@@ -385,8 +388,9 @@ dependOn_ZG_ZS() {
     P2="${BASEFMRI_ZONESVC}:$2"
     P3="$3"
     [ -z "$P3" ] && \
-        P3="zone_$2"
-    shift 3
+        P3="zone_$2" \
+        || shift
+    shift 2
     dependOn "$P1" "$P2" "$P3" "$@"
     RESD=$?
     if [ $RESD = 0 -a -z "$QUIET" ]; then
