@@ -279,7 +279,7 @@ dependOn() {
     ### Optional parameters
     DEPPG="$3"
     [ -z "$DEPPG" ] && \
-        DEPPG="`echo "$DEPEND_FMRI" | awk -F' ' {print $1} | sed 's,:.*$,,' | awk -F/ '{print $NF}'`"
+        DEPPG="`echo "$DEPEND_FMRI" | awk -F' ' '{print $1}' | sed -e 's,^svc:/,,' -e 's,:.*$,,' | awk -F/ '{print $NF}'`"
         ### By default, chomp the first service basename, like "zone-group"
 
     ### See `man smf` for definitions and greater details
