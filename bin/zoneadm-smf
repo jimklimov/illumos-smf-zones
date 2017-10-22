@@ -5,7 +5,7 @@
 ### described in OI Wiki: http://wiki.openindiana.org/oi/Zones+as+SMF+services
 ### This project is distributed under the terms of CDDL 1.0
 ###     http://www.illumos.org/license/CDDL
-### Copyright (C) 2013-2015 by Jim Klimov
+### Copyright (C) 2013-2017 by Jim Klimov
 ###     https://github.com/jimklimov/illumos-smf-zones
 
 LANG=C
@@ -54,6 +54,9 @@ usage() {
     echo "      dependOn_ZG_ZS | dependOn_ZG_ZG } \ "
     echo "      TARGET_INST DEPEND_INST [DEPPG] [GROUPING] [RESTARTON]"
     echo "      Creates a dependency between SMF instances for zones or zone-groups"
+    echo "      and wraps the zone and creates the group, if this was not yet done."
+    echo "      dependOn_ZS_ZG: Shorthand for dependency of a ZoneSvc instance (TGT)"
+    echo "      on a ZoneGroup (DEP)"
     echo "$0 { zonesvccfg_start_timeout | zonesvccfg_stop_timeout } zone time"
     echo "      Define a custom SMF method timeout for enable or disable actions"
     echo "$0 zonesvccfg_life_args zone check_start check_stop init_stop"
