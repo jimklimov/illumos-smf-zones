@@ -21,5 +21,9 @@ For related trickery, please see also:
 * https://github.com/jimklimov/illumos-splitroot-scripts
 * https://github.com/jimklimov/illumos-smf-zfspools
 
+...and loosely related by general theme:
+
+* https://github.com/jimklimov/vboxsvc
+
 Hope this helps,
 Jim Klimov
