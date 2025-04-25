@@ -13,7 +13,13 @@ cd bin
 ````
 
 should register the needed services and wrap all your existing zones into
-individual services grouped as svc:/system/zone-group:default
+individual services grouped as `svc:/system/zone-group:default`
+
+For related trickery, please see also:
+
+* https://github.com/jimklimov/illumos-articles
+* https://github.com/jimklimov/illumos-splitroot-scripts
+* https://github.com/jimklimov/illumos-smf-zfspools
 
 Hope this helps,
 Jim Klimov
