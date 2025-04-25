@@ -1,6 +1,7 @@
 # illumos-smf-zones
 Zones as SMF services, as detailed in my article on OI Wiki
 http://wiki.openindiana.org/oi/Zones+as+SMF+services
+(simple copy stashed at https://github.com/jimklimov/illumos-articles)
 
 Currently this includes all the code defined as part of the SMF manifests,
 so nothing to install except registration of the two XMLs. See Wiki article
